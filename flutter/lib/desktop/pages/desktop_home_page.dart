@@ -395,6 +395,19 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ===== LYMA LOGO START =====
+          if (!isOutgoingOnly)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Image.asset(
+                'assets/lyma-logo.png',
+                height: 40,
+                fit: BoxFit.contain,
+              ),
+            ).marginOnly(bottom: 8),
+          // ===== LYMA LOGO END =====
+
+          // ===== ORIGINAL CODE START =====
           Column(
             children: [
               if (!isOutgoingOnly)
@@ -407,6 +420,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 ),
             ],
           ),
+          // ===== ORIGINAL CODE END =====
           SizedBox(
             height: 10.0,
           ),

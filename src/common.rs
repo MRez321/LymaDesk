@@ -2450,7 +2450,8 @@ pub fn get_dst_align_rgba() -> usize {
 
 pub fn read_custom_client(config: &str) {
     let Ok(data) = decode64(config) else {
-        log::error!("Failed to decode custom client config");
+        // Not base64 — try plain-text key=value format (build-time custom configs).
+        read_plain_custom_client(config);
         return;
     };
     const KEY: &str = "5Qbwsde3unUcJBtrx9ZkvUmwFNoExHzpryHuPUdqlWM=";
@@ -2519,6 +2520,52 @@ pub fn read_custom_client(config: &str) {
                 .insert(k, v.to_owned());
         };
     }
+}
+
+/// Fallback parser for plain-text `key=value` custom client configs.
+/// Used when the config is not base64-encoded (i.e., not a signed config).
+/// This supports build-time customisation without requiring a private key.
+fn read_plain_custom_client(config: &str) {
+    let mut defaults = config::DEFAULT_SETTINGS.write().unwrap();
+    let mut hard = config::HARD_SETTINGS.write().unwrap();
+    for line in config.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let Some((key, value)) = line.split_once('=') else {
+            continue;
+        };
+        let key = key.trim();
+        let value = value.trim();
+        match key {
+            "host" => {
+                defaults.insert("custom-rendezvous-server".to_string(), value.to_string());
+                hard.insert("custom-rendezvous-server".to_string(), value.to_string());
+            }
+            "relay" => {
+                defaults.insert(keys::OPTION_RELAY_SERVER.to_string(), value.to_string());
+                hard.insert(keys::OPTION_RELAY_SERVER.to_string(), value.to_string());
+            }
+            "api" => {
+                defaults.insert(keys::OPTION_API_SERVER.to_string(), value.to_string());
+                hard.insert(keys::OPTION_API_SERVER.to_string(), value.to_string());
+            }
+            "key" => {
+                defaults.insert(keys::OPTION_KEY.to_string(), value.to_string());
+                hard.insert(keys::OPTION_KEY.to_string(), value.to_string());
+            }
+            "app-name" => {
+                *config::APP_NAME.write().unwrap() = value.to_string();
+            }
+            _ => {
+                let k = key.replace("_", "-");
+                defaults.insert(k.clone(), value.to_string());
+                hard.insert(k, value.to_string());
+            }
+        }
+    }
+    log::debug!("Loaded plain-text custom client config");
 }
 
 #[inline]

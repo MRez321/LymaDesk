@@ -407,7 +407,40 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             ).marginOnly(bottom: 8),
           // ===== LYMA LOGO END =====
 
-          // ===== ORIGINAL CODE START =====
+          // ===== LYMA CONTACT INFO START =====
+          if (!isOutgoingOnly)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0, bottom: 4.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  GestureDetector(
+                    onTap: () async {
+                      final uri = Uri.parse('https://lymagroups.ir');
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri);
+                      }
+                    },
+                    child: Text(
+                      'lymagroups.ir',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        decoration: TextDecoration.underline,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '+98 912 000 0000',
+                    style: TextStyle(
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          // ===== LYMA CONTACT INFO END =====
           Column(
             children: [
               if (!isOutgoingOnly)

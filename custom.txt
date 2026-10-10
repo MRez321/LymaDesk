@@ -1,2 +1,5 @@
+app-name=LymaDesk
 host=desk.lymagroups.ir
 key=Togh4B1VnEd3j5ttxvVp4qMKSNJBf55feBtQu51oB3g=
+relay=desk.lymagroups.ir
+api=http://desk.lymagroups.ir

@@ -80,15 +80,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final isOutgoingOnly = bind.isOutgoingOnly();
     final children = <Widget>[
       if (!isOutgoingOnly) buildPresetPasswordWarning(),
-      if (bind.isCustomClient())
+      if (!isOutgoingOnly)
         Align(
           alignment: Alignment.center,
-          child: loadPowered(context),
+          child: loadLogo(),
         ),
-      Align(
-        alignment: Alignment.center,
-        child: loadLogo(),
-      ),
       buildTip(context),
       if (!isOutgoingOnly) buildIDBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),
@@ -398,49 +394,58 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           // ===== LYMA LOGO START =====
           if (!isOutgoingOnly)
             Align(
-              alignment: Alignment.centerLeft,
+              alignment: Alignment.center,
               child: Image.asset(
                 'assets/lyma-logo.png',
-                height: 40,
+                height: 56,
                 fit: BoxFit.contain,
               ),
-            ).marginOnly(bottom: 8),
+            ).marginOnly(bottom: 10),
           // ===== LYMA LOGO END =====
 
           // ===== LYMA CONTACT INFO START =====
           if (!isOutgoingOnly)
-            Padding(
-              padding: const EdgeInsets.only(top: 4.0, bottom: 4.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  GestureDetector(
-                    onTap: () async {
-                      final uri = Uri.parse('https://lymagroups.ir');
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri);
-                      }
-                    },
-                    child: Text(
-                      'lymagroups.ir',
-                      style: TextStyle(
-                        color: Colors.blue,
-                        decoration: TextDecoration.underline,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '+98 912 000 0000',
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: () async {
+                    final uri = Uri.parse('https://lumagroups.ir');
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri);
+                    }
+                  },
+                  child: Text(
+                    'lymagroups.ir',
                     style: TextStyle(
-                      fontSize: 13,
+                      color: const Color(0xFFFBB12F),
+                      decoration: TextDecoration.underline,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '025-33808586',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
             ),
           // ===== LYMA CONTACT INFO END =====
+
+          // ===== SEPARATOR LINE START =====
+          if (!isOutgoingOnly)
+            Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 12),
+              height: 1,
+              width: double.infinity,
+              color: Colors.grey.shade300,
+            ),
+          // ===== SEPARATOR LINE END =====
           Column(
             children: [
               if (!isOutgoingOnly)

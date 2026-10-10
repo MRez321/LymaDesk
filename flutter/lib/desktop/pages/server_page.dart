@@ -66,7 +66,9 @@ class _DesktopServerPageState extends State<DesktopServerPage>
     // Other platforms keep the old behaviour exactly: the ambiguity this guards against is a
     // Linux session logout, which closes every window in the session.
     final byOperator = _cmClosedByOperator || !isLinux;
-    Future.wait([gFFI.serverModel.closeAll(byOperator: byOperator), gFFI.close()]).then((_) {
+    Future.wait(
+            [gFFI.serverModel.closeAll(byOperator: byOperator), gFFI.close()])
+        .then((_) {
       if (isMacOS) {
         RdPlatformChannel.instance.terminate();
       } else {
@@ -462,8 +464,8 @@ class _CmHeaderState extends State<_CmHeader>
           begin: Alignment.topRight,
           end: Alignment.bottomLeft,
           colors: [
-            Color(0xff00bfe1),
-            Color(0xff0071ff),
+            Color(0xffFBB12F),
+            Color(0xffd99100),
           ],
         ),
       ),

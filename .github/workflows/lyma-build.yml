@@ -123,10 +123,19 @@ jobs:
           flutter pub get
           flutter pub run flutter_launcher_icons
 
-      - name: Copy logo asset to flutter/assets/
-        # lyma-logo.png is gitignored (*png rule); create it from res/icon.png for the sidebar.
+      - name: Copy sidebar logo asset to flutter/assets/
+        # lyma-logo.png is gitignored (*png rule); create it from lyma.png (repo root) for the sidebar.
         shell: bash
-        run: cp res/icon.png flutter/assets/lyma-logo.png
+        run: cp lyma.png flutter/assets/lyma-logo.png
+
+      - name: Copy nav logo assets to flutter/assets/
+        # logo.png, logo_light.png, logo_dark.png are gitignored (*png rule);
+        # create them from res/icon.png (user's custom app icon).
+        shell: bash
+        run: |
+          cp res/icon.png flutter/assets/logo.png
+          cp res/icon.png flutter/assets/logo_light.png
+          cp res/icon.png flutter/assets/logo_dark.png
 
       - name: Build LymaDesk
         shell: bash
@@ -135,18 +144,23 @@ jobs:
           # Copy custom.txt (LymaDesk server defaults) into the build output
           cp custom.txt ./flutter/build/windows/x64/runner/Release/
           # Rename the output directory
-          mv ./flutter/build/windows/x64/runner/Release ./lyma-desktop
+          mv ./flutter/build/windows/x64/runner/Release ./LymaDesk
 
-      - name: Create zip archive
-        shell: pwsh
+      - name: Build LymaDesk installer
+        shell: bash
         run: |
-          Compress-Archive -Path ./lyma-desktop -DestinationPath ./lyma-desktop-windows-x64.zip
+          # Remove dpiAware from manifest for proper high-DPI installer support
+          sed -i '/dpiAware/d' res/manifest.xml
+          pushd ./libs/portable
+          pip3 install -r requirements.txt
+          python3 ./generate.py -f ../../LymaDesk/ -o . -e ../../LymaDesk/rustdesk.exe
+          popd
+          # Rename installer from rustdesk-portable-packer.exe to LymaDesk
+          mv ./target/release/rustdesk-portable-packer.exe ./LymaDesk-1.5.0-setup.exe
 
-      - name: Upload LymaDesk build
+      - name: Upload LymaDesk installer
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: lyma-desktop-windows-x64
-          path: |
-            ./lyma-desktop/
-            ./lyma-desktop-windows-x64.zip
+          path: ./LymaDesk-1.5.0-setup.exe
           if-no-files-found: error

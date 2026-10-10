@@ -62,18 +62,22 @@ void showServerSettings(OverlayDialogManager dialogManager,
     print("Invalid server config: $e");
   }
   showServerSettingsWithValue(
-      ServerConfig.fromOptions(options), dialogManager, setState);
+      ServerConfig.fromOptions(options), dialogManager, setState,
+      showValues: isCustomClient);
 }
 
-void showServerSettingsWithValue(
-    ServerConfig serverConfig,
-    OverlayDialogManager dialogManager,
-    void Function(VoidCallback)? upSetState) async {
+void showServerSettingsWithValue(ServerConfig serverConfig,
+    OverlayDialogManager dialogManager, void Function(VoidCallback)? upSetState,
+    {bool showValues = true}) async {
   var isInProgress = false;
-  final idCtrl = TextEditingController(text: serverConfig.idServer);
-  final relayCtrl = TextEditingController(text: serverConfig.relayServer);
-  final apiCtrl = TextEditingController(text: serverConfig.apiServer);
-  final keyCtrl = TextEditingController(text: serverConfig.key);
+  final idCtrl =
+      TextEditingController(text: showValues ? serverConfig.idServer : '');
+  final relayCtrl =
+      TextEditingController(text: showValues ? serverConfig.relayServer : '');
+  final apiCtrl =
+      TextEditingController(text: showValues ? serverConfig.apiServer : '');
+  final keyCtrl =
+      TextEditingController(text: showValues ? serverConfig.key : '');
 
   RxString idServerMsg = ''.obs;
   RxString relayServerMsg = ''.obs;
@@ -95,10 +99,18 @@ void showServerSettingsWithValue(
           null,
           errMsgs,
           ServerConfig(
-              idServer: idCtrl.text.trim(),
-              relayServer: relayCtrl.text.trim(),
-              apiServer: apiCtrl.text.trim(),
-              key: keyCtrl.text.trim()));
+              idServer: idCtrl.text.trim().isNotEmpty
+                  ? idCtrl.text.trim()
+                  : serverConfig.idServer,
+              relayServer: relayCtrl.text.trim().isNotEmpty
+                  ? relayCtrl.text.trim()
+                  : serverConfig.relayServer,
+              apiServer: apiCtrl.text.trim().isNotEmpty
+                  ? apiCtrl.text.trim()
+                  : serverConfig.apiServer,
+              key: keyCtrl.text.trim().isNotEmpty
+                  ? keyCtrl.text.trim()
+                  : serverConfig.key));
       setState(() {
         isInProgress = false;
       });

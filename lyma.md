@@ -11,9 +11,17 @@ targeting the custom server at `desk.lymagroups.ir`.
 | Default rendezvous server | `id.rustdesk.com` | `desk.lymagroups.ir` |
 | Default relay server | `id.rustdesk.com` | `desk.lymagroups.ir` |
 | Default API server | `api.rustdesk.com` | `http://desk.lymagroups.ir` |
-| Sidebar logo | (none) | `assets/lyma-logo.png` |
-| Sidebar contact | — | website + phone |
+| Sidebar logo | (none) | `assets/lyma-logo.png` (from `lyma.png` in repo root) |
+| Nav logo (sidebar top) | RustDesk logo | LymaDesk (from `res/icon.png`) |
+| Sidebar website link | — | `lymagroups.ir` → `https://lumagroups.ir` |
+| Sidebar phone | — | `025-33808586` |
+| Settings > Network fields | pre-filled | hidden (defaults work, user overrides) |
 | Windows exe file properties | RustDesk | LymaDesk |
+| Windows app icon | 48×48 ICO (1961 bytes) | 16–256 multi-res ICO (83 KB) |
+| Installer | — | `LymaDesk-1.5.0-setup.exe` (self-extracting) |
+| Theme accent blue | `#0071FF` | `#FBB12F` |
+| Sidebar "powered by" | shown | removed |
+| Tab title | RustDesk | LymaDesk |
 
 ## How Customization Works
 
@@ -32,7 +40,7 @@ Flow:
    `key=value` lines and populates `config::DEFAULT_SETTINGS` + `HARD_SETTINGS`.
 4. `Config::get_options()` → `hbb_common/src/config.rs:1220` returns
    `DEFAULT_SETTINGS + CONFIG2.options + OVERWRITE_SETTINGS`, so the custom
-   defaults appear in the Flutter connection dialog.
+   defaults are used even when the Settings dialog shows empty fields.
 5. `is_custom_client()` → `src/common.rs:2600` returns `true` when
    `APP_NAME != "RustDesk"`, enabling custom-client behavior throughout.
 
@@ -94,26 +102,77 @@ user changes at runtime.
 
 ### 3. `flutter/lib/desktop/pages/desktop_home_page.dart`
 
-**`buildTip()` — L389**
+**`buildTip()` — L389** (called from `buildLeftPane()` at L88)
 
 Added sidebar branding block inside `buildTip()`:
 
-- **LYMA LOGO** (L398–L408): Displays `assets/lyma-logo.png` (height 40,
-  `BoxFit.contain`) on the left side of the sidebar, shown when
+- **LYMA LOGO** (L398–L408): Displays `assets/lyma-logo.png` (height 56,
+  `BoxFit.contain`) centered at the top of the sidebar, shown when
   `!isOutgoingOnly`.
-- **LYMA CONTACT INFO** (L410–L443): Below the logo, a `Column` with:
-  - Website link `lymagroups.ir` (opens via `url_launcher` `launchUrl`)
-  - Phone number `+98 912 000 0000` (placeholder — see *Known Limits*)
+- **LYMA CONTACT INFO** (L410–L442): Below the logo, a centered `Column` with:
+  - Website link: displayed text `lymagroups.ir`, tap opens `https://lumagroups.ir`,
+    colored `#FBB12F` (LymaDesk accent), `fontSize: 14`, `fontWeight: w500`
+  - Phone number: `025-33808586`, `fontSize: 13`, `color: grey.shade600`
+- **Separator line** (L444–L452): A `Container` with `height: 1`,
+  `color: Colors.grey.shade300`, full width, with `margin` top 12 / bottom 12.
+  Visually separates the branding block from the ID/password displays below.
 
-The Dart imports `url_launcher` is already present via `pubspec.yaml`
-(`url_launcher: ^6.3.1`).
+The `url_launcher` import is already present (`desktop_home_page.dart:22`).
 
-### 4. `flutter/windows/runner/Runner.rc`
+**Removed**: `loadPowered(context)` — the "powered by RustDesk" text/link
+that previously appeared at the top of the sidebar has been removed from
+`buildLeftPane()`.
 
-**`STRINGTABLE` / file-properties block — L88–L100**
+**`buildLeftPane()` sidebar structure** (L81):
+```
+Sidebar (buildLeftPane)
+├── buildPresetPasswordWarning()     — password warning banner
+├── loadLogo()                       — small nav logo (assets/logo*.png)
+├── buildTip(context)                — LymaDesk branding (logo + contact info + separator)
+├── buildIDBoard(context)            — 9-digit ID display
+├── buildPasswordBoard(context)      — 6-digit password display
+└── buildHelpCards()                 — help/support cards
+```
 
-Updated Windows file properties from "RustDesk" to "LymaDesk" so Explorer
-shows the custom product name and description:
+### 4. `flutter/lib/mobile/widgets/dialog.dart`
+
+**`showServerSettings()` — L56 / `showServerSettingsWithValue()` — L68**
+
+Added `showValues` parameter (default `true`). When `false`, the text field
+controllers are initialized with empty strings instead of the server config
+values. In `submit()`, empty field values fall back to the `serverConfig`
+defaults (which come from `custom.txt` via `DEFAULT_SETTINGS`).
+
+- `showServerSettings()` calls `showServerSettingsWithValue(..., showValues: isCustomClient)`
+  — hides defaults for custom clients like LymaDesk.
+- `showServerSettingsWithValue()` in `scan_page.dart:159` (QR code scanner)
+  uses the default `showValues: true` — shows scanned QR values.
+
+**`submit()` fallback logic — L94–109:**
+```dart
+idServer: idCtrl.text.trim().isNotEmpty
+    ? idCtrl.text.trim()
+    : serverConfig.idServer,
+relayServer: relayCtrl.text.trim().isNotEmpty
+    ? relayCtrl.text.trim()
+    : serverConfig.relayServer,
+apiServer: apiCtrl.text.trim().isNotEmpty
+    ? apiCtrl.text.trim()
+    : serverConfig.apiServer,
+key: keyCtrl.text.trim().isNotEmpty
+    ? keyCtrl.text.trim()
+    : serverConfig.key
+```
+
+This means: the Settings > Network fields appear empty, but when the user
+clicks "Connect" without typing anything, the defaults from `custom.txt`
+are used automatically. If the user enters a value, it overrides the default.
+
+### 5. `flutter/windows/runner/Runner.rc`
+
+**File-properties block — L88–L100**
+
+Updated Windows file properties from "RustDesk" to "LymaDesk":
 
 | Property | Value |
 |---|---|
@@ -124,25 +183,65 @@ shows the custom product name and description:
 | `OriginalFilename` | `lymadeSk.exe` |
 | `ProductName` | `LymaDesk` |
 
-The exe file itself remains `rustdesk.exe` (see *Known Limits*).
+### 6. `flutter/windows/runner/resources/app_icon.ico`
 
-### 5. `flutter/windows/runner/resources/app_icon.ico`
+The Windows application icon. Replaced with a proper multi-resolution ICO
+containing all standard Windows icon sizes (16, 24, 32, 48, 64, 128, 256).
+The CI also regenerates this from `res/icon.png` via
+`flutter pub run flutter_launcher_icons`.
 
-The Windows application icon. Regenerated from `res/icon.png` during CI via
-`flutter pub run flutter_launcher_icons`. The committed copy is from the
-user's custom `res/icon.png`.
+| | `app_icon.ico` | `res/icon.png` |
+|---|---|---|
+| Before | 48×48, 1961 bytes | 42134 bytes |
+| After | 16–256 multi-res, 83055 bytes | 42134 bytes |
 
-### 6. `.github/workflows/lyma-build.yml` (new)
+### 7. `flutter/lib/common.dart` (theme colors)
 
-GitHub Actions workflow that builds LymaDesk for Windows x64 and uploads the
-resulting build as a downloadable artifact.
+**Theme accent blue**: `MyTheme.accent` changed from `#0071FF` (RustDesk blue)
+to `#FBB12F` (LymaDesk orange). Also updated `accent50`, `accent80`, `button`,
+`_msgboxColor()` default, theme `primary` colors (both light and dark), link
+colors, and the `colorMap` "blue" entry to use the new accent.
+
+### 8. `flutter/lib/desktop/pages/desktop_home_page.dart` (sidebar branding)
+
+- **Removed**: `loadPowered(context)` ("powered by RustDesk" link) from the
+  sidebar top. The navbar logo now uses `loadLogo()` directly.
+- **Sidebar logo**: `assets/lyma-logo.png` is centered (`Alignment.center`),
+  height 56, sourced from `lyma.png` in the repo root.
+- **Contact info**: Website link and phone number are centered
+  (`CrossAxisAlignment.center`). Website link uses `#FBB12F` color with
+  `fontWeight: w500` and `fontSize: 14`. Phone uses `grey.shade600`.
+- **Separator**: A grey divider line (`height: 1`, `grey.shade300`) with
+  `margin: 12` top/bottom separates the branding block from the rest of the
+  sidebar.
+
+### 9. `flutter/lib/desktop/widgets/tabbar_widget.dart`
+
+- Tab title text changed from `"RustDesk"` to `"LymaDesk"`.
+
+### 10. `flutter/lib/desktop/pages/desktop_setting_page.dart` and
+    `flutter/lib/mobile/pages/settings_page.dart`
+
+- `"About RustDesk"` → `"About LymaDesk"` (both desktop and mobile).
+- `"Keep RustDesk background service"` → `"Keep LymaDesk background service"`.
+- Mobile "About" dialog: website URL from `https://rustdesk.com/` to
+  `https://lumagroups.ir/`, display text from `rustdesk.com` to `lymagroups.ir`.
+
+### 11. `flutter/lib/desktop/pages/server_page.dart`
+
+- Server page header gradient: `#00bfe1` / `#0071ff` → `#FBB12F` / `#d99100`.
+
+### 12. `.github/workflows/lyma-build.yml` (CI workflow)
+
+GitHub Actions workflow that builds LymaDesk for Windows x64 and produces a
+self-extracting installer.
 
 **Jobs:**
 
 1. `generate-bridge` — calls `bridge.yml` (reusable workflow) to generate the
    `flutter_rust_bridge` Dart/Rust bindings needed by `flutter build windows`.
 
-2. `build-windows` — runs on `windows-2022`:
+2. `build-windows` — runs on `windows-2022` (19 steps):
    - Restores bridge files from `bridge-artifact`
    - Installs LLVM 15.0.6 (for Clang-based FFI builds)
    - Installs Flutter 3.24.5 (stable, x64)
@@ -152,18 +251,27 @@ resulting build as a downloadable artifact.
    - Sets up vcpkg (pinned commit `9e593bb…`, `x64-windows-static`)
    - Runs `flutter pub run flutter_launcher_icons` to regenerate
      `app_icon.ico` from `res/icon.png`
-   - Creates `flutter/assets/lyma-logo.png` from `res/icon.png`
+   - Creates `flutter/assets/lyma-logo.png` from `lyma.png` (sidebar logo)
+   - Creates `flutter/assets/logo.png`, `logo_light.png`, `logo_dark.png`
+     from `res/icon.png` (nav logo at sidebar top)
    - Runs `python3 ./build.py --portable --flutter --skip-portable-pack --hwcodec --vram`
-   - Copies `custom.txt` into the Release output directory
-   - Renames the output to `lyma-desktop/`
-   - Zips the output with PowerShell `Compress-Archive`
-   - Uploads `lyma-desktop/` + `lyma-desktop-windows-x64.zip` as artifact
-     `lyma-desktop-windows-x64`
+   - Copies `custom.txt` into the `Release/` output directory
+   - Renames the output directory to `LymaDesk/`
+   - Builds the portable installer via `libs/portable/generate.py`
+   - Renames the installer to `LymaDesk-1.5.0-setup.exe`
+   - Uploads `LymaDesk-1.5.0-setup.exe` as artifact `lyma-desktop-windows-x64`
 
 **Trigger:** `workflow_dispatch`, `push` to `main`, `pull_request` to `main`.
 
 **Download:** Artifacts are available in the GitHub Actions "Artifacts"
-section for each workflow run.
+section for each workflow run. The artifact is a single
+`LymaDesk-1.5.0-setup.exe` self-extracting installer — no duplicate files.
+
+
+### 13. `dev-guide.md` (new)
+Development guide for hot-reload sidebar editing. Covers prerequisites,
+quick-start commands, file locations, and step-by-step instructions for
+changing the sidebar logo, contact info, colors, and styling.
 
 ## CI Environment Variables
 
@@ -172,11 +280,12 @@ section for each workflow run.
 | `SCITER_RUST_VERSION` | `1.75` | Matches `RUST_VERSION` discussion #7503 |
 | `FLUTTER_VERSION` | `3.24.5` | Stable Flutter used by current RustDesk |
 | `LLVM_VERSION` | `15.0.6` | LLVM with Clang for FFI |
-| `VCPKG_COMMIT_ID` | `9e593bb…` | Pinned vcpkg version |
+| `VCPKG_COMMIT_ID` | `9e593bb…` | Pinned vcpkg version (2026.07.29) |
 | `VCPKG_BINARY_SOURCES` | `clear;x-gha,readwrite` | GitHub Actions binary cache |
 | `VERSION` | `1.5.0` | App version from `Cargo.toml` |
 
-## Building Locally
+
+## Building Locally (Windows PowerShell)
 
 ### Prerequisites (Windows)
 
@@ -184,32 +293,48 @@ section for each workflow run.
 - Flutter 3.24.5 (stable)
 - LLVM 15.0.6+ with Clang
 - vcpkg (pinned commit `9e593bb…`, triplet `x64-windows-static`)
-- Python 3
+- Python 3 (run as `python`, not `python3`)
+- Visual Studio Build Tools (Desktop development with C++)
 
 ### Steps
 
-```bash
-# 1. Generate bridge files (needs Rust 1.75 + Flutter 3.22.3 on Linux/macOS)
+```powershell
+# 1. Generate bridge files (needs Rust 1.75 + Flutter)
 cargo install flutter_rust_bridge_codegen --version 1.80.1 --features "uuid" --locked
-pushd flutter && flutter pub get && popd
-~/.cargo/bin/flutter_rust_bridge_codegen \
-  --rust-input ./src/flutter_ffi.rs \
-  --dart-output ./flutter/lib/generated_bridge.dart
+cd flutter
+flutter pub get
+flutter_rust_bridge_codegen `
+  --rust-input ../src/flutter_ffi.rs `
+  --dart-output ./lib/generated_bridge.dart
+cd ..
 
-# 2. Regenerate Windows icon from custom res/icon.png
-pushd flutter && flutter pub run flutter_launcher_icons && popd
+# 2. Regenerate Windows icon from custom res\icon.png
+cd flutter
+flutter pub run flutter_launcher_icons
+cd ..
 
-# 3. Copy logo asset (gitignored: *png rule in .gitignore)
-cp res/icon.png flutter/assets/lyma-logo.png
+# 3. Create logo assets (gitignored: *png rule in .gitignore)
+cp lyma.png flutter\assets\lyma-logo.png
+cp res\icon.png flutter\assets\logo.png
+cp res\icon.png flutter\assets\logo_light.png
+cp res\icon.png flutter\assets\logo_dark.png
 
 # 4. Build
-python3 .\build.py --portable --flutter --skip-portable-pack --hwcodec --vram
+python .\build.py --portable --flutter --skip-portable-pack --hwcodec --vram
 
 # 5. Copy custom.txt into the Release output
-cp custom.txt ./flutter/build/windows/x64/runner/Release/
+cp custom.txt .\flutter\build\windows\x64\runner\Release\
 
-# 6. (Output is at ./flutter/build/windows/x64/runner/Release/)
-#    Rename to lyma-desktop and zip for distribution.
+# 6. Rename output directory
+Rename-Item .\flutter\build\windows\x64\runner\Release\ -NewName LymaDesk
+
+# 7. Build the installer
+(Get-Content res\manifest.xml) -replace 'dpiAware.*', '' | Set-Content res\manifest.xml
+cd libs\portable
+pip install -r requirements.txt
+python .\generate.py -f ..\..\LymaDesk\ -o . -e ..\..\LymaDesk\rustdesk.exe
+cd ..\..
+Move-Item .\target\release\rustdesk-portable-packer.exe .\LymaDesk-1.5.0-setup.exe
 ```
 
 ## Architecture: Default Server Configuration Flow
@@ -238,33 +363,85 @@ Flutter: mainGetOptions() → ServerConfig.fromOptions()
   │  reads custom-rendezvous-server, relay-server, api-server, key
   │
   ▼
-Connection dialog — fields pre-filled with desk.lymagroups.ir
+Settings > Network dialog
+  │  showValues: isCustomClient() → fields empty, defaults hidden
+  │  submit() falls back to serverConfig values when fields empty
+  │
+  ▼
+Connect uses desk.lymagroups.ir (or user-entered override)
 ```
+
+## Logo & Icon Reference
+
+| UI element | File | Source |
+|---|---|---|
+| Sidebar logo (large, below nav) | `flutter/assets/lyma-logo.png` | `lyma.png` (tracked, gitignored under `*png` with exception) |
+| Nav logo (small, top of sidebar) | `flutter/assets/logo.png` | `res/icon.png` (gitignored) |
+| Nav logo (light theme) | `flutter/assets/logo_light.png` | `res/icon.png` (gitignored) |
+| Nav logo (dark theme) | `flutter/assets/logo_dark.png` | `res/icon.png` (gitignored) |
+| App icon (taskbar, Alt+Tab) | `flutter/windows/runner/resources/app_icon.ico` | `res/icon.png` (regenerated by `flutter_launcher_icons`) |
+
+To change any logo or icon:
+1. Edit `lyma.png` (sidebar logo) or `res/icon.png` (app/nav icons)
+2. CI will regenerate all icons automatically from these sources
+3. For local testing: run `flutter pub run flutter_launcher_icons` and
+   copy `lyma.png` to `flutter/assets/lyma-logo.png`, and `res/icon.png`
+   to the other asset files listed above
+
+## Coexistence with RustDesk
+
+LymaDesk can be installed alongside RustDesk without conflicts because all
+Windows instance-detection and IPC identifiers are namespaced by `APP_NAME`
+("LymaDesk"), which `custom.txt` sets at startup:
+
+| Mechanism | RustDesk identifier | LymaDesk identifier |
+|---|---|---|
+| Tray single-instance mutex | `Local\\RustDesk_tray` | `Local\\LymaDesk_tray` |
+| IPC named pipe (Windows) | `\\.\pipe\RustDesk\query` | `\\.\pipe\LymaDesk\query` |
+| IPC socket (Linux/macOS) | `/tmp/RustDesk/ipc…` | `/tmp/LymaDesk/ipc…` |
+| Windows service name | `RustDesk` | `LymaDesk` |
+| Install path (portable) | `.../RustDesk/RustDesk.exe` | `.../LymaDesk/LymaDesk.exe` |
+| Virtual printer name | `RustDesk (Remote Printer)` | `LymaDesk (Remote Printer)` |
+| Registry subkey (settings) | `…\RustDesk` | `…\LymaDesk` |
+
+All of these use `config::APP_NAME` or `crate::get_app_name()`, both of which
+resolve to the value from `custom.txt`. No additional changes are needed for
+side-by-side installation.
 
 ## Known Limits
 
 1. **Exe filename** remains `rustdesk.exe`. The `CMakeLists.txt`
    `BINARY_NAME "rustdesk"` is unchanged because `build.py`'s portable packer
    expects that name. The display name is "LymaDesk" via `APP_NAME` config
-   + `Runner.rc`. `Runner.rc` uses `lymadeSk` as the internal/original name
-   to avoid conflicts with Windows file properties.
+   + `Runner.rc`. `Runner.rc` uses `lymadeSk` as the internal/original name.
 
-2. **Phone number** `+98 912 000 0000` is a placeholder. No phone number
-   was found in the repo or `custom.txt`. Update the value at
-   `flutter/lib/desktop/pages/desktop_home_page.dart:435` with the real
-   number.
+2. **`res/icon.png` is a custom PNG** (42,134 bytes, 500×500). The generated
+  `app_icon.ico` contains all standard Windows sizes (16–256). `res/icon.ico`,
+  `res/tray-icon.ico`, `res/logo.svg`, and various PNG sizes are also
+  user-provided replacements for RustDesk defaults.
 
-3. **`lyma-logo.png`** is git-ignored (`*png` rule in `.gitignore`).
-   It must be created in CI from `res/icon.png`. Do not commit it.
+3. **Generated asset PNGs are git-ignored** (`lyma-logo.png`, `logo*.png` in
+  `flutter/assets/`). They are created in CI from `lyma.png` (sidebar logo)
+  and `res/icon.png` (nav logos). The source `lyma.png` itself is tracked via
+  a `.gitignore` exception (`!lyma.png`).
 
-4. **usbmmidd / printer drivers** are not included in this build. They are
-   optional and only needed for virtual-display (headless) and printer
-   redirection features. The original RustDesk CI downloads them after build.
+4. **usbmmidd / printer drivers** are not included in this build.
 
 5. **Bridge files** (`generated_bridge.dart`,
    `generated_bridge.freezed.dart`) are generated by `bridge.yml` and must
-   be present before `flutter build windows`. The `lyma-build.yml` workflow
-   reuses `bridge.yml` via `workflow_call`.
+   be present before `flutter build windows`.
 
-6. **CI only builds Windows x64.** macOS and Linux builds are not included
-   in this workflow. Add them to the matrix in `lyma-build.yml` if needed.
+6. **CI only builds Windows x64.** macOS and Linux builds are not included.
+
+7. **The installer (`LymaDesk-1.5.0-setup.exe`) is a self-extracting portable
+   packer**, not an MSI installer. It extracts files to a user-chosen directory
+   and runs the app — no system registry modifications or uninstall entry.
+
+## Related Files
+
+| File | Purpose |
+|---|---|
+| `dev-guide.md` | Development guide with hot-reload setup and sidebar editing instructions |
+| `lyma.md` | This file — comprehensive change documentation |
+| `custom.txt` | Default server configuration (host, relay, api, key, app-name) |
+| `.github/workflows/lyma-build.yml` | CI workflow (Windows x64 installer build) |

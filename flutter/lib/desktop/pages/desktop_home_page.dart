@@ -80,11 +80,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final isOutgoingOnly = bind.isOutgoingOnly();
     final children = <Widget>[
       if (!isOutgoingOnly) buildPresetPasswordWarning(),
-      if (!isOutgoingOnly)
-        Align(
-          alignment: Alignment.center,
-          child: loadLogo(),
-        ),
       buildTip(context),
       if (!isOutgoingOnly) buildIDBoard(context),
       if (!isOutgoingOnly) buildPasswordBoard(context),
@@ -397,6 +392,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               alignment: Alignment.center,
               child: Image.asset(
                 'assets/lyma-logo.png',
+                width: 200,
                 height: 56,
                 fit: BoxFit.contain,
               ),

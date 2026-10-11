@@ -11,8 +11,8 @@ targeting the custom server at `desk.lymagroups.ir`.
 | Default rendezvous server | `id.rustdesk.com` | `desk.lymagroups.ir` |
 | Default relay server | `id.rustdesk.com` | `desk.lymagroups.ir` |
 | Default API server | `api.rustdesk.com` | `http://desk.lymagroups.ir` |
-| Sidebar logo | (none) | `assets/lyma-logo.png` (from `lyma.png` in repo root) |
-| Nav logo (sidebar top) | RustDesk logo | LymaDesk (from `res/icon.png`) |
+| Sidebar logo (large) | (none) | `lyma.png` (from repo root, full-width, height 56) |
+| Sidebar nav logo | RustDesk logo | **Removed** — only `lyma.png` remains |
 | Sidebar website link | — | `lymagroups.ir` → `https://lumagroups.ir` |
 | Sidebar phone | — | `025-33808586` |
 | Settings > Network fields | pre-filled | hidden (defaults work, user overrides) |
@@ -100,39 +100,31 @@ Parses `key=value` lines and populates `DEFAULT_SETTINGS` + `HARD_SETTINGS`:
 `HARD_SETTINGS` entries lock the value so it cannot be overridden by
 user changes at runtime.
 
+
 ### 3. `flutter/lib/desktop/pages/desktop_home_page.dart`
 
-**`buildTip()` — L389** (called from `buildLeftPane()` at L88)
+**Sidebar branding block (`buildTip()` — L389)** (called from `buildLeftPane()` at L83)
 
-Added sidebar branding block inside `buildTip()`:
+- **Removed old logo**: `loadLogo()` (which displayed `assets/logo.png`, the small 300×60 nav logo) has been **removed** from the sidebar's `children` list. Previously both `loadLogo()` and the `lyma-logo.png` image appeared — now only `lyma-logo.png` remains.
+- **LYMA LOGO** (L389–L400): Displays `assets/lyma-logo.png` (width: 200, height: 56, `BoxFit.contain`) centered at the top of the sidebar, shown when `!isOutgoingOnly`.
+- **LYMA CONTACT INFO** (L401–L435): Below the logo, a centered `Column` (`CrossAxisAlignment.center`) with:
+  - Website link: displayed text `lymagroups.ir`, tap opens `https://lumagroups.ir`, colored `#FBB12F`, `fontSize: 14`, `fontWeight: w500`
+  - Phone number: `025-33808586`, `fontSize: 13`, `color: Colors.grey.shade600`
+- **Separator line** (L437–L445): `Container` with `height: 1`, `color: Colors.grey.shade300`, `width: double.infinity`, `margin: EdgeInsets.only(top: 12, bottom: 12)`. Visually separates the branding block from the ID/password displays below.
 
-- **LYMA LOGO** (L398–L408): Displays `assets/lyma-logo.png` (height 56,
-  `BoxFit.contain`) centered at the top of the sidebar, shown when
-  `!isOutgoingOnly`.
-- **LYMA CONTACT INFO** (L410–L442): Below the logo, a centered `Column` with:
-  - Website link: displayed text `lymagroups.ir`, tap opens `https://lumagroups.ir`,
-    colored `#FBB12F` (LymaDesk accent), `fontSize: 14`, `fontWeight: w500`
-  - Phone number: `025-33808586`, `fontSize: 13`, `color: grey.shade600`
-- **Separator line** (L444–L452): A `Container` with `height: 1`,
-  `color: Colors.grey.shade300`, full width, with `margin` top 12 / bottom 12.
-  Visually separates the branding block from the ID/password displays below.
+**Removed**: `loadPowered(context)` — the "powered by RustDesk" text/link that previously appeared at the top of the sidebar has been removed from `buildLeftPane()`.
 
-The `url_launcher` import is already present (`desktop_home_page.dart:22`).
-
-**Removed**: `loadPowered(context)` — the "powered by RustDesk" text/link
-that previously appeared at the top of the sidebar has been removed from
-`buildLeftPane()`.
-
-**`buildLeftPane()` sidebar structure** (L81):
+**Sidebar structure** (after changes):
 ```
 Sidebar (buildLeftPane)
 ├── buildPresetPasswordWarning()     — password warning banner
-├── loadLogo()                       — small nav logo (assets/logo*.png)
 ├── buildTip(context)                — LymaDesk branding (logo + contact info + separator)
 ├── buildIDBoard(context)            — 9-digit ID display
 ├── buildPasswordBoard(context)      — 6-digit password display
 └── buildHelpCards()                 — help/support cards
 ```
+The old `loadLogo()` step is **removed** — only `lyma-logo.png` appears, centered and full-width.
+
 
 ### 4. `flutter/lib/mobile/widgets/dialog.dart`
 
@@ -143,8 +135,8 @@ controllers are initialized with empty strings instead of the server config
 values. In `submit()`, empty field values fall back to the `serverConfig`
 defaults (which come from `custom.txt` via `DEFAULT_SETTINGS`).
 
-- `showServerSettings()` calls `showServerSettingsWithValue(..., showValues: isCustomClient)`
-  — hides defaults for custom clients like LymaDesk.
+- `showServerSettings()` calls `showServerSettingsWithValue(..., showValues: !isCustomClient)`
+  — hides defaults and keeps fields empty for custom clients like LymaDesk.
 - `showServerSettingsWithValue()` in `scan_page.dart:159` (QR code scanner)
   uses the default `showValues: true` — shows scanned QR values.
 
@@ -241,7 +233,7 @@ self-extracting installer.
 1. `generate-bridge` — calls `bridge.yml` (reusable workflow) to generate the
    `flutter_rust_bridge` Dart/Rust bindings needed by `flutter build windows`.
 
-2. `build-windows` — runs on `windows-2022` (19 steps):
+2. `build-windows` — runs on `windows-2022` (17 steps):
    - Restores bridge files from `bridge-artifact`
    - Installs LLVM 15.0.6 (for Clang-based FFI builds)
    - Installs Flutter 3.24.5 (stable, x64)
@@ -252,8 +244,8 @@ self-extracting installer.
    - Runs `flutter pub run flutter_launcher_icons` to regenerate
      `app_icon.ico` from `res/icon.png`
    - Creates `flutter/assets/lyma-logo.png` from `lyma.png` (sidebar logo)
-   - Creates `flutter/assets/logo.png`, `logo_light.png`, `logo_dark.png`
-     from `res/icon.png` (nav logo at sidebar top)
+   - `flutter/assets/icon.svg` is tracked in-repo and pre-replaced with LymaDesk logo (fallback for `loadIcon(16)`)
+   - `logo*.png` nav logo files are still generated but no longer displayed in sidebar (old logo removed)
    - Runs `python3 ./build.py --portable --flutter --skip-portable-pack --hwcodec --vram`
    - Copies `custom.txt` into the `Release/` output directory
    - Renames the output directory to `LymaDesk/`
@@ -364,7 +356,7 @@ Flutter: mainGetOptions() → ServerConfig.fromOptions()
   │
   ▼
 Settings > Network dialog
-  │  showValues: isCustomClient() → fields empty, defaults hidden
+  │  showValues: !isCustomClient → fields empty for LymaDesk, defaults hidden
   │  submit() falls back to serverConfig values when fields empty
   │
   ▼
@@ -375,18 +367,20 @@ Connect uses desk.lymagroups.ir (or user-entered override)
 
 | UI element | File | Source |
 |---|---|---|
-| Sidebar logo (large, below nav) | `flutter/assets/lyma-logo.png` | `lyma.png` (tracked, gitignored under `*png` with exception) |
-| Nav logo (small, top of sidebar) | `flutter/assets/logo.png` | `res/icon.png` (gitignored) |
-| Nav logo (light theme) | `flutter/assets/logo_light.png` | `res/icon.png` (gitignored) |
-| Nav logo (dark theme) | `flutter/assets/logo_dark.png` | `res/icon.png` (gitignored) |
+| Sidebar logo (centered, full-width) | `flutter/assets/lyma-logo.png` | `lyma.png` (tracked, gitignored under `*png` with exception) |
+| Top nav window icon (fallback) | `flutter/assets/icon.svg` | Replaced in-repo with LymaDesk logo (base64 from `res/icon.png`) |
 | App icon (taskbar, Alt+Tab) | `flutter/windows/runner/resources/app_icon.ico` | `res/icon.png` (regenerated by `flutter_launcher_icons`) |
+
+| Nav logo files (gitignored, no longer used in sidebar) | `flutter/assets/logo*.png` | `res/icon.png` (generated in CI, unused since old logo removed) |
 
 To change any logo or icon:
 1. Edit `lyma.png` (sidebar logo) or `res/icon.png` (app/nav icons)
 2. CI will regenerate all icons automatically from these sources
 3. For local testing: run `flutter pub run flutter_launcher_icons` and
    copy `lyma.png` to `flutter/assets/lyma-logo.png`, and `res/icon.png`
-   to the other asset files listed above
+   to `flutter/assets/logo.png`, `logo_light.png`, and `logo_dark.png`
+4. For the top-nav icon fallback (`icon.svg`), replace `flutter/assets/icon.svg`
+   with a LymaDesk SVG (or embed `res/icon.png` as base64 in SVG)
 
 ## Coexistence with RustDesk
 

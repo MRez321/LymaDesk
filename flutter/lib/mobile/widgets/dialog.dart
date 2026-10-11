@@ -63,7 +63,7 @@ void showServerSettings(OverlayDialogManager dialogManager,
   }
   showServerSettingsWithValue(
       ServerConfig.fromOptions(options), dialogManager, setState,
-      showValues: isCustomClient);
+      showValues: !isCustomClient);
 }
 
 void showServerSettingsWithValue(ServerConfig serverConfig,

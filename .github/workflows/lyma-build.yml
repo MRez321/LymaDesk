@@ -17,7 +17,7 @@ env:
   VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
   # vcpkg version: 2026.07.29
   VCPKG_COMMIT_ID: "9e593bb18ea69cc5095e012465dcd675a822ed0d"
-  VERSION: "1.5.0"
+  SIGN_BASE_URL: ""  # Set to signing service URL (e.g. https://sign.example.com) to enable code signing
 
 jobs:
   generate-bridge:
@@ -123,10 +123,10 @@ jobs:
           flutter pub get
           flutter pub run flutter_launcher_icons
 
-      - name: Copy sidebar logo asset to flutter/assets/
-        # lyma-logo.png is gitignored (*png rule); create it from lyma.png (repo root) for the sidebar.
+      - name: Copy sidebar logo asset from res/icon.png
+        # lyma-logo.png is gitignored (*png rule); create it from res/icon.png for the sidebar.
         shell: bash
-        run: cp lyma.png flutter/assets/lyma-logo.png
+        run: cp res/icon.png flutter/assets/lyma-logo.png
 
       - name: Copy nav logo assets to flutter/assets/
         # logo.png, logo_light.png, logo_dark.png are gitignored (*png rule);
@@ -146,6 +146,16 @@ jobs:
           # Rename the output directory
           mv ./flutter/build/windows/x64/runner/Release ./LymaDesk
 
+      - name: Sign LymaDesk binaries (optional — suppresses SmartScreen)
+        # Signs the .exe and .dll in the LymaDesk directory to build Microsoft
+        # reputation and avoid SmartScreen warnings. Requires SIGN_BASE_URL
+        # (env) and SIGN_SECRET_KEY (GitHub secret) — only runs when configured.
+        if: env.SIGN_BASE_URL != '-2' && env.SIGN_BASE_URL != ''
+        shell: bash
+        run: |
+          pip3 install requests argparse
+          BASE_URL=${{ env.SIGN_BASE_URL }} SECRET_KEY=${{ secrets.SIGN_SECRET_KEY }} python3 res/job.py sign_files ./LymaDesk/
+
       - name: Build LymaDesk installer
         shell: bash
         run: |
@@ -157,6 +167,13 @@ jobs:
           popd
           # Rename installer from rustdesk-portable-packer.exe to LymaDesk
           mv ./target/release/rustdesk-portable-packer.exe ./LymaDesk-1.5.0-setup.exe
+      - name: Sign LymaDesk installer
+        # Sign the self-extracting installer itself (also for SmartScreen).
+        if: env.SIGN_BASE_URL != '-2' && env.SIGN_BASE_URL != ''
+        shell: bash
+        run: |
+          pip3 install requests argparse
+          BASE_URL=${{ env.SIGN_BASE_URL }} SECRET_KEY=${{ secrets.SIGN_SECRET_KEY }} python3 res/job.py sign_files ./LymaDesk-1.5.0-setup.exe
 
       - name: Upload LymaDesk installer
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

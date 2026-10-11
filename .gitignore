@@ -16,11 +16,8 @@ cert.pfx
 *.bak
 *png
 
-# LymaDesk sidebar logo (git-ignored under *png rule; explicitly tracked here)
-!lyma.png
 *svg
 *jpg
-sciter.dll
 **pdb
 src/bridge_generated.rs
 src/bridge_generated.io.rs

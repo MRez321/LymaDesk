@@ -409,6 +409,39 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  // Company name (Persian, bold)
+                  Text(
+                    'هوشمند گستران ستاره لیما',
+                    style: TextStyle(
+                      color: Colors.black87,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                    textDirection: TextDirection.rtl,
+                  ),
+                  const SizedBox(height: 4),
+                  // Motto (Persian, smaller)
+                  Text(
+                    'یک گام جلوتر از تهدیدات سایبری',
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 12,
+                    ),
+                    textAlign: TextAlign.center,
+                    textDirection: TextDirection.rtl,
+                  ),
+                  const SizedBox(height: 8),
+                  // Phone number
+                  Text(
+                    '025-33808586',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Website link
                   GestureDetector(
                     onTap: () async {
                       final uri = Uri.parse('https://lymagroups.ir/');
@@ -421,17 +454,9 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                       style: TextStyle(
                         color: const Color(0xFFFBB12F),
                         decoration: TextDecoration.underline,
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w500,
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '025-33808586',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade600,
                     ),
                   ),
                 ],

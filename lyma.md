@@ -13,9 +13,9 @@ targeting the custom server at `desk.lymagroups.ir`.
 | Default API server | `api.rustdesk.com` | `http://desk.lymagroups.ir` |
 | Sidebar logo (large) | (none) | `lyma.png` (from repo root, full-width, height 56) |
 | Sidebar nav logo | RustDesk logo | **Removed** — only `lyma.png` remains |
-| Sidebar website link | — | `lymagroups.ir` → `https://lumagroups.ir` |
+| Sidebar website link | — | `lymagroups.ir` → `https://lymagroups.ir/` |
 | Sidebar phone | — | `025-33808586` |
-| Settings > Network fields | pre-filled | hidden (defaults work, user overrides) |
+| Settings > Network fields | pre-filled | hidden (empty fields, defaults from custom.txt used; user overrides if typed) |
 | Windows exe file properties | RustDesk | LymaDesk |
 | Windows app icon | 48×48 ICO (1961 bytes) | 16–256 multi-res ICO (83 KB) |
 | Installer | — | `LymaDesk-1.5.0-setup.exe` (self-extracting) |
@@ -105,10 +105,10 @@ user changes at runtime.
 
 **Sidebar branding block (`buildTip()` — L389)** (called from `buildLeftPane()` at L83)
 
-- **Removed old logo**: `loadLogo()` (which displayed `assets/logo.png`, the small 300×60 nav logo) has been **removed** from the sidebar's `children` list. Previously both `loadLogo()` and the `lyma-logo.png` image appeared — now only `lyma-logo.png` remains.
-- **LYMA LOGO** (L389–L400): Displays `assets/lyma-logo.png` (width: 200, height: 56, `BoxFit.contain`) centered at the top of the sidebar, shown when `!isOutgoingOnly`.
-- **LYMA CONTACT INFO** (L401–L435): Below the logo, a centered `Column` (`CrossAxisAlignment.center`) with:
-  - Website link: displayed text `lymagroups.ir`, tap opens `https://lumagroups.ir`, colored `#FBB12F`, `fontSize: 14`, `fontWeight: w500`
+- **Removed old logo**: `loadLogo()` (which displayed `assets/logo.png`) has been **removed** from the sidebar's `children` list. Previously both `loadLogo()` and the `lyma-logo.png` image appeared — now only `lyma-logo.png` remains.
+- **LYMA LOGO** (L389–L402): `assets/lyma-logo.png` with `width: double.infinity`, `height: 56`, `BoxFit.contain` — full-width inside `Padding(horizontal: 8)` + `Align(center)`, shown when `!isOutgoingOnly`.
+- **LYMA CONTACT INFO** (L405–L440): Wrapped in `Align(alignment: Alignment.center)` containing a `Column(crossAxisAlignment: CrossAxisAlignment.center, ...)`:
+  - Website link: displayed text `lymagroups.ir`, tap opens `https://lymagroups.ir/`, colored `#FBB12F`, `fontSize: 14`, `fontWeight: w500`
   - Phone number: `025-33808586`, `fontSize: 13`, `color: Colors.grey.shade600`
 - **Separator line** (L437–L445): `Container` with `height: 1`, `color: Colors.grey.shade300`, `width: double.infinity`, `margin: EdgeInsets.only(top: 12, bottom: 12)`. Visually separates the branding block from the ID/password displays below.
 
@@ -195,16 +195,20 @@ to `#FBB12F` (LymaDesk orange). Also updated `accent50`, `accent80`, `button`,
 colors, and the `colorMap` "blue" entry to use the new accent.
 
 ### 8. `flutter/lib/desktop/pages/desktop_home_page.dart` (sidebar branding)
+- **Removed old nav logo**: `loadLogo()` (which displayed `assets/logo.png`) has been
+  **removed** from the sidebar's `children` list. Previously both `loadLogo()` and
+  `lyma-logo.png` appeared — now only `lyma-logo.png` remains.
+- **Removed**: `loadPowered(context)` ("powered by RustDesk" link) from the sidebar.
 
-- **Removed**: `loadPowered(context)` ("powered by RustDesk" link) from the
-  sidebar top. The navbar logo now uses `loadLogo()` directly.
-- **Sidebar logo**: `assets/lyma-logo.png` is centered (`Alignment.center`),
-  height 56, sourced from `lyma.png` in the repo root.
-- **Contact info**: Website link and phone number are centered
-  (`CrossAxisAlignment.center`). Website link uses `#FBB12F` color with
-  `fontWeight: w500` and `fontSize: 14`. Phone uses `grey.shade600`.
-- **Separator**: A grey divider line (`height: 1`, `grey.shade300`) with
-  `margin: 12` top/bottom separates the branding block from the rest of the
+- **Sidebar logo**: `assets/lyma-logo.png` — full-width (`width: double.infinity`),
+  `height: 56`, inside `Padding(horizontal: 8)` + `Align(center)`, sourced from
+  `lyma.png` in the repo root.
+- **Contact info**: Wrapped in `Align(alignment: Alignment.center)` containing a
+  `Column(crossAxisAlignment: CrossAxisAlignment.center, ...)`. Website link uses
+  `#FBB12F`, `fontWeight: w500`, `fontSize: 14`, opens `https://lymagroups.ir/`.
+  Phone (`025-33808586`) uses `grey.shade600`, `fontSize: 13`.
+- **Separator**: grey divider (`height: 1`, `grey.shade300`, `width: double.infinity`)
+  with `margin: 12` top/bottom separates the branding block from the rest of the
   sidebar.
 
 ### 9. `flutter/lib/desktop/widgets/tabbar_widget.dart`

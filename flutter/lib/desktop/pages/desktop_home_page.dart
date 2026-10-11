@@ -388,48 +388,54 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         children: [
           // ===== LYMA LOGO START =====
           if (!isOutgoingOnly)
-            Align(
-              alignment: Alignment.center,
-              child: Image.asset(
-                'assets/lyma-logo.png',
-                width: 200,
-                height: 56,
-                fit: BoxFit.contain,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Align(
+                alignment: Alignment.center,
+                child: Image.asset(
+                  'assets/lyma-logo.png',
+                  width: double.infinity,
+                  height: 56,
+                  fit: BoxFit.contain,
+                ),
               ),
             ).marginOnly(bottom: 10),
           // ===== LYMA LOGO END =====
 
           // ===== LYMA CONTACT INFO START =====
           if (!isOutgoingOnly)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                GestureDetector(
-                  onTap: () async {
-                    final uri = Uri.parse('https://lumagroups.ir');
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri);
-                    }
-                  },
-                  child: Text(
-                    'lymagroups.ir',
-                    style: TextStyle(
-                      color: const Color(0xFFFBB12F),
-                      decoration: TextDecoration.underline,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
+            Align(
+              alignment: Alignment.center,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: () async {
+                      final uri = Uri.parse('https://lymagroups.ir/');
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri);
+                      }
+                    },
+                    child: Text(
+                      'lymagroups.ir',
+                      style: TextStyle(
+                        color: const Color(0xFFFBB12F),
+                        decoration: TextDecoration.underline,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '025-33808586',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey.shade600,
+                  const SizedBox(height: 4),
+                  Text(
+                    '025-33808586',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           // ===== LYMA CONTACT INFO END =====
 

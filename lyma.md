@@ -426,15 +426,17 @@ side-by-side installation.
    expects that name. The display name is "LymaDesk" via `APP_NAME` config
    + `Runner.rc`. `Runner.rc` uses `lymadeSk` as the internal/original name.
 
-2. **`res/icon.png` is a custom PNG** (42,134 bytes, 500×500). The generated
-  `app_icon.ico` contains all standard Windows sizes (16–256). `res/icon.ico`,
-  `res/tray-icon.ico`, `res/logo.svg`, and various PNG sizes are also
-  user-provided replacements for RustDesk defaults.
+2. **`res/icon.png`** (42,134 bytes, 500×500) is the source for all generated icons.
+  `flutter_launcher_icons` (CI step 12) generates `app_icon.ico` with all standard
+  Windows sizes (16–256) from this PNG.
+  **`res/icon.ico`** is the installer icon (used by `libs/portable/build.rs`).
+  It is a custom multi-resolution ICO (7 sizes: 16/24/32/48/64/128/256) built from
+  `res/icon.png` — replaces the original 16×16-only ICO that caused pixelation.
+  **`res/tray-icon.ico`** and `res/logo.svg` are also user-provided replacements.
 
-3. **Generated asset PNGs are git-ignored** (`lyma-logo.png`, `logo*.png` in
-  `flutter/assets/`). They are created in CI from `lyma.png` (sidebar logo)
-  and `res/icon.png` (nav logos). The source `lyma.png` itself is tracked via
-  a `.gitignore` exception (`!lyma.png`).
+3. **Generated asset PNGs are git-ignored** (`*png` rule in `.gitignore`). They are
+   created in CI from `res/icon.png` (sidebar logo + nav logos).
+   `lyma.png` in repo root is no longer used for sidebar (see Changes above).
 
 4. **usbmmidd / printer drivers** are not included in this build.
 

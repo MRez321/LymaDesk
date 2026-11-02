@@ -1,0 +1,198 @@
+name: Build LymaDesk Windows Installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  SCITER_RUST_VERSION: "1.75"
+  RUST_VERSION: "1.75"
+  FLUTTER_VERSION: "3.24.5"
+  LLVM_VERSION: "15.0.6"
+  VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+  VCPKG_COMMIT_ID: "9e593bb18ea69cc5095e012465dcd675a822ed0d"
+
+jobs:
+  generate-bridge:
+    uses: ./.github/workflows/bridge.yml
+
+  build-windows-installer:
+    name: LymaDesk Windows x64 Installer
+    needs: generate-bridge
+    runs-on: windows-2022
+    steps:
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: Checkout source code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          submodules: recursive
+
+      - name: Restore bridge files
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: bridge-artifact
+          path: ./
+
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@ebc0426251bc40c7cd31162802432c68818ab8f0 # v2.0.9
+        with:
+          version: ${{ env.LLVM_VERSION }}
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@2783a3f08e1baf891508463f8c6653c258246225 # v2.12.0
+        with:
+          channel: "stable"
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          architecture: x64
+
+      - name: Replace engine with rustdesk custom flutter engine
+        run: |
+          flutter doctor -v
+          flutter precache --windows
+          Invoke-WebRequest -Uri https://github.com/rustdesk/engine/releases/download/main/windows-x64-release.zip -OutFile windows-x64-release.zip
+          Expand-Archive -Path windows-x64-release.zip -DestinationPath windows-x64-release
+          mv -Force windows-x64-release/*  C:/hostedtoolcache/windows/flutter/stable-${{ env.FLUTTER_VERSION }}-x64/bin/cache/artifacts/engine/windows-x64-release/
+
+      - name: Patch Flutter
+        shell: bash
+        run: |
+          cp .github/patches/flutter_3.24.4_dropdown_menu_enableFilter.diff $(dirname $(dirname $(which flutter)))
+          cd $(dirname $(dirname $(which flutter)))
+          if [[ "3.24.5" == ${{env.FLUTTER_VERSION}} ]]; then
+            git apply flutter_3.24.4_dropdown_menu_enableFilter.diff
+          fi
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        with:
+          toolchain: ${{ env.SCITER_RUST_VERSION }}
+          targets: x86_64-pc-windows-msvc
+          components: "rustfmt"
+
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+        with:
+          prefix-key: ${{ runner.os }}
+
+      - name: Setup vcpkg with GitHub Actions binary cache
+        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11
+        with:
+          vcpkgDirectory: C:\vcpkg
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
+          doNotCache: false
+
+      - name: Install vcpkg dependencies
+        env:
+          VCPKG_DEFAULT_HOST_TRIPLET: x64-windows-static
+        shell: bash
+        run: |
+          if ! $VCPKG_ROOT/vcpkg \
+            install \
+            --triplet x64-windows-static \
+            --x-install-root="$VCPKG_ROOT/installed"; then
+            find "${VCPKG_ROOT}/" -name "*.log" | while read -r _1; do
+              echo "$_1:"
+              echo "======"
+              cat "$_1"
+              echo "======"
+              echo ""
+            done
+            exit 1
+          fi
+          head -n 100 "${VCPKG_ROOT}/buildtrees/ffmpeg/build-x64-windows-static-rel-out.log" || true
+
+      - name: Generate app icons from res/icon.png
+        shell: bash
+        run: |
+          cd flutter
+          flutter pub get
+          flutter pub run flutter_launcher_icons
+
+      - name: Copy sidebar logo asset from res/icon.png
+        shell: bash
+        run: cp res/icon.png flutter/assets/lyma-logo.png
+
+      - name: Copy nav logo assets to flutter/assets/
+        shell: bash
+        run: |
+          cp res/icon.png flutter/assets/logo.png
+          cp res/icon.png flutter/assets/logo_light.png
+          cp res/icon.png flutter/assets/logo_dark.png
+
+      - name: Build LymaDesk application
+        shell: bash
+        run: |
+          python3 ./build.py --flutter --hwcodec --vram
+          # Copy custom.txt (LymaDesk server defaults) into the build output
+          cp custom.txt ./flutter/build/windows/x64/runner/Release/
+          # Rename the output directory to LymaDesk for consistent packaging
+          mv ./flutter/build/windows/x64/runner/Release ./LymaDesk
+
+      - name: Install NSIS
+        uses: nsis-dev/setup-nsis@v1
+        with:
+          version: "latest"
+
+      - name: Create NSIS installer script
+        shell: bash
+        run: |
+          cat > installer.nsi << 'EOF'
+          !include "MUI2.nsh"
+
+          !define APP_NAME "LymaDesk"
+          !define APP_EXE "rustdesk.exe"
+          !define VERSION "1.5.0"
+
+          Name "${APP_NAME}"
+          OutFile "${APP_NAME}-${VERSION}-installer.exe"
+          InstallDir "$PROGRAMFILES\${APP_NAME}"
+          RequestExecutionLevel admin
+          Unicode true
+
+          !insertmacro MUI_PAGE_DIRECTORY
+          !insertmacro MUI_PAGE_INSTFILES
+          !insertmacro MUI_UNPAGE_CONFIRM
+          !insertmacro MUI_UNPAGE_INSTFILES
+
+          !insertmacro MUI_LANGUAGE "English"
+
+          Section "Install"
+              SetOutPath "$INSTDIR"
+              File /r "LymaDesk\*"
+              CreateShortCut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\${APP_EXE}"
+              CreateDirectory "$SMPROGRAMS\${APP_NAME}"
+              CreateShortCut "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk" "$INSTDIR\${APP_EXE}"
+              WriteUninstaller "$INSTDIR\uninstall.exe"
+              WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "DisplayName" "${APP_NAME}"
+              WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "UninstallString" "$INSTDIR\uninstall.exe"
+          SectionEnd
+
+          Section "Uninstall"
+              Delete "$DESKTOP\${APP_NAME}.lnk"
+              Delete "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk"
+              RMDir "$SMPROGRAMS\${APP_NAME}"
+              RMDir /r "$INSTDIR"
+              DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
+          SectionEnd
+          EOF
+
+      - name: Compile NSIS installer
+        shell: bash
+        run: makensis -V3 installer.nsi
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lyma-desktop-windows-x64-installer
+          path: ./LymaDesk-1.5.0-installer.exe
+          if-no-files-found: error
